@@ -8,13 +8,12 @@ class NeuralNet():
         self.initWeights()
 
         self.bias = [np.random.random(b) for b in dim]
+        self.activations = [np.zeros(b, 1) for b in dim]
         self.xSet = [np.array(x) for x in xSet]
         self.ySet = [np.array(y) for y in ySet]
 
-    def fowardProp(self):
+    def fowardProp(self, dataNum):
         for i in range(self.layers - 1):
-            pass
-            
 
 
     def computeCost(self):
