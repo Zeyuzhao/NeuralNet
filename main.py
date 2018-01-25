@@ -1,6 +1,7 @@
 import random
 
 import numpy as np
+import mnist_loader
 
 class NeuralNet():
     VALUE_SHIFT = -2
@@ -18,16 +19,13 @@ class NeuralNet():
         self.weights = []
         self.initWeights()
 
-        self.z = [np.random.zeros(b,1) for b in self.hiddenLayersDim]
+        self.z = [np.zeros((b,1)) for b in self.hiddenLayersDim]
         self.bias = [np.random.random(b) for b in self.hiddenLayersDim]
-        self.activations = [np.zeros(b, 1) for b in self.hiddenLayersDim]
+        self.activations = [np.zeros((b, 1)) for b in self.hiddenLayersDim]
 
-        dataSet = random.shuffle(dataSet)
-        self.xSet = []
-        self.ySet = []
-        for item in dataSet:
-            self.xSet.append(item[0])
-            self.ySet.append(item[1])
+        self.dataSet = list(dataSet)
+        self.shuffleList()
+
 
     def fowardProp(self, dataNum):
         x = self.xSet[dataNum]
@@ -35,7 +33,7 @@ class NeuralNet():
         self.setZ(2, z2)
         a2 = self.sigmoid(z2)
         self.setActivations(2, a2)
-        for i in range(3, self.layers):
+        for i in range(3, self.numLayers):
             #z and b from layer 2 to l
             #a from layer 1 to l
             currentZ = np.dot(self.getWeights(i), self.getActivations(i - 1)) + self.getBias(i)
@@ -56,7 +54,6 @@ class NeuralNet():
         delta = []
         gradientW = []
         gradientB = []
-
         #Compute the delta values, and corresponding w/b gradients
         for i in range(self.numLayers, 1):
             prev = diff if (i == self.numLayers) else delta[0]
@@ -68,10 +65,19 @@ class NeuralNet():
             bCurrent = deltaCurrent
             gradientW.insert(0, wCurrent)
             gradientB.insert(0, bCurrent)
+        print(self.computeCost(dataNum))
         return (gradientW, gradientB)
 
     def SGD(self, epochs, batchSize, eta):
-        pass
+        dataLen = len(self.xSet)
+        for iter in range(epochs):
+            self.shuffleList()
+            batches = [range(n, n + batchSize) for n in range(0, dataLen, batchSize)]
+            for m in batches:
+                self.updateBatch(m, eta)
+            print("Epoch Complete")
+
+
 
     def updateBatch(self, batch, eta):
         wGradient = [np.zeros(w.shape) for w in self.weights]
@@ -82,7 +88,7 @@ class NeuralNet():
             #Element wise summation
             wGradient = [a + b for a, b in zip(wGradient, currentWGradient)]
             bGradient = [a + b for a, b in zip(bGradient, currentBGradient)]
-        self.weights = [w - (eta / len(batch)) * newW for w, newW in zip(self.weights, wGradient))]
+        self.weights = [w - (eta / len(batch)) * newW for w, newW in zip(self.weights, wGradient)]
         self.bias = [b - (eta / len(batch)) *newB for b, newB in zip(self.weights, bGradient)]
 
 
@@ -128,3 +134,15 @@ class NeuralNet():
     def setBias(self, i, v):
         self.bias[i + self.VALUE_SHIFT] = v.copy()
 
+    def shuffleList(self):
+        np.random.shuffle(self.dataSet)
+        self.xSet = []
+        self.ySet = []
+        for item in self.dataSet:
+            self.xSet.append(item[0])
+            self.ySet.append(item[1])
+
+
+training_data, validation_data, test_data = mnist_loader.load_data_wrapper()
+
+testNN = NeuralNet(training_data, [784, 30, 10])
