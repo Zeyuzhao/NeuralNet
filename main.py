@@ -20,7 +20,7 @@ class NeuralNet():
         self.initWeights()
 
         self.z = [np.zeros((b,1)) for b in self.hiddenLayersDim]
-        self.bias = [np.random.random(b) for b in self.hiddenLayersDim]
+        self.bias = [(np.random.random(b) - 0.5) * 50 for b in self.hiddenLayersDim]
         self.activations = [np.zeros((b, 1)) for b in self.hiddenLayersDim]
 
         self.dataSet = list(dataSet)
@@ -33,7 +33,7 @@ class NeuralNet():
         self.setZ(2, z2)
         a2 = self.sigmoid(z2)
         self.setActivations(2, a2)
-        for i in range(3, self.numLayers):
+        for i in range(3, self.numLayers + 1):
             #z and b from layer 2 to l
             #a from layer 1 to l
             currentZ = np.dot(self.getWeights(i), self.getActivations(i - 1)) + self.getBias(i)
@@ -95,7 +95,7 @@ class NeuralNet():
 
 
     def initWeights(self):
-        for i in range(2, self.numLayers):
+        for i in range(2, self.numLayers + 1):
             prev = self.getLayerDimension(i - 1)
             current = self.getLayerDimension(i)
             self.weights.append(np.random.rand(current, prev))
@@ -146,3 +146,5 @@ class NeuralNet():
 training_data, validation_data, test_data = mnist_loader.load_data_wrapper()
 
 testNN = NeuralNet(training_data, [784, 30, 10])
+
+testNN.SGD(30, 10, 3)
