@@ -20,7 +20,7 @@ class NeuralNet():
         self.initWeights()
 
         self.z = [np.zeros((b,1)) for b in self.hiddenLayersDim]
-        self.bias = [(np.random.random(b) - 0.5) * 50 for b in self.hiddenLayersDim]
+        self.bias = [(np.random.random(b)).reshape(b, 1) for b in self.hiddenLayersDim]
         self.activations = [np.zeros((b, 1)) for b in self.hiddenLayersDim]
 
         self.dataSet = list(dataSet)
@@ -29,14 +29,17 @@ class NeuralNet():
 
     def fowardProp(self, dataNum):
         x = self.xSet[dataNum]
-        z2 = np.dot(self.getWeights(2), x) + self.getBias(2)
+        z2 = np.dot(self.getWeights(2), x)
+        z2 += self.getBias(2)
         self.setZ(2, z2)
         a2 = self.sigmoid(z2)
         self.setActivations(2, a2)
         for i in range(3, self.numLayers + 1):
             #z and b from layer 2 to l
             #a from layer 1 to l
-            currentZ = np.dot(self.getWeights(i), self.getActivations(i - 1)) + self.getBias(i)
+            currentW = self.getWeights(i)
+            prevA = self.getActivations(i - 1)
+            currentZ = np.dot(currentW, prevA) + self.getBias(i)
             self.setZ(i, currentZ)
             currentA = self.sigmoid(currentZ)
             self.setActivations(i, currentA)
@@ -48,6 +51,8 @@ class NeuralNet():
         return np.linalg.norm(y - yHat) ** 2 / 2
 
     def backProp(self, dataNum):
+        self.activations = [np.zeros((b, 1)) for b in self.hiddenLayersDim]
+        print(dataNum)
         yHat = self.fowardProp(dataNum)
         y = self.ySet[dataNum]
         diff = y - yHat
@@ -55,9 +60,10 @@ class NeuralNet():
         gradientW = []
         gradientB = []
         #Compute the delta values, and corresponding w/b gradients
-        for i in range(self.numLayers, 1):
-            prev = diff if (i == self.numLayers) else delta[0]
-            deltaCurrent = np.multiply(prev, self.sigmoidPrime(self.getZ(i)))
+        for i in range(self.numLayers, 1, -1):
+            prev = diff if (i == self.numLayers) else np.dot(self.getWeights(i + 1).transpose(), delta[0])
+            zCurrent = self.sigmoidPrime(self.getZ(i))
+            deltaCurrent = np.multiply(prev, zCurrent)
             delta.insert(0, deltaCurrent)
 
             actPrev = self.getActivations(i - 1)
@@ -80,16 +86,17 @@ class NeuralNet():
 
 
     def updateBatch(self, batch, eta):
-        wGradient = [np.zeros(w.shape) for w in self.weights]
-        bGradient = [np.zeros(b.shape) for b in self.bias]
+        wGradient = [np.zeros((w.shape)) for w in self.weights]
+        bGradient = [np.zeros((b.shape)) for b in self.bias]
 
         for number in batch:
-            currentBGradient, currentWGradient = self.backProp(number)
+            currentWGradient, currentBGradient = self.backProp(number)
             #Element wise summation
             wGradient = [a + b for a, b in zip(wGradient, currentWGradient)]
             bGradient = [a + b for a, b in zip(bGradient, currentBGradient)]
+        print("backProp complete")
         self.weights = [w - (eta / len(batch)) * newW for w, newW in zip(self.weights, wGradient)]
-        self.bias = [b - (eta / len(batch)) *newB for b, newB in zip(self.weights, bGradient)]
+        self.bias = [b - (eta / len(batch)) *newB for b, newB in zip(self.bias, bGradient)]
 
 
 
