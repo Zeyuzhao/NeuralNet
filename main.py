@@ -18,17 +18,19 @@ class NeuralNet():
         self.numLayers = len(dim)
         self.weights = []
         self.initWeights()
+        self.bias = [(np.random.randn(b,1)) for b in self.hiddenLayersDim]
 
-        self.z = [np.zeros((b,1)) for b in self.hiddenLayersDim]
-        self.bias = [(np.random.random(b)).reshape(b, 1) for b in self.hiddenLayersDim]
+        self.z = [np.zeros((b, 1)) for b in self.hiddenLayersDim]
         self.activations = [np.zeros((b, 1)) for b in self.hiddenLayersDim]
-
+        self.currentY = 0
+        self.currentX = 0
         self.dataSet = list(dataSet)
         self.shuffleList()
 
 
     def fowardProp(self, dataNum):
         x = self.xSet[dataNum]
+        self.currentX = x
         z2 = np.dot(self.getWeights(2), x)
         z2 += self.getBias(2)
         self.setZ(2, z2)
@@ -43,7 +45,8 @@ class NeuralNet():
             self.setZ(i, currentZ)
             currentA = self.sigmoid(currentZ)
             self.setActivations(i, currentA)
-        return self.getActivations(self.numLayers)
+        self.currentY = self.getActivations(self.numLayers)
+        return self.currentY
 
     def computeCost(self, dataNum):
         yHat = self.fowardProp(dataNum)
@@ -52,10 +55,9 @@ class NeuralNet():
 
     def backProp(self, dataNum):
         self.activations = [np.zeros((b, 1)) for b in self.hiddenLayersDim]
-        print(dataNum)
         yHat = self.fowardProp(dataNum)
         y = self.ySet[dataNum]
-        diff = y - yHat
+        diff = -(y - yHat)
         delta = []
         gradientW = []
         gradientB = []
@@ -71,7 +73,6 @@ class NeuralNet():
             bCurrent = deltaCurrent
             gradientW.insert(0, wCurrent)
             gradientB.insert(0, bCurrent)
-        print(self.computeCost(dataNum))
         return (gradientW, gradientB)
 
     def SGD(self, epochs, batchSize, eta):
@@ -83,8 +84,6 @@ class NeuralNet():
                 self.updateBatch(m, eta)
             print("Epoch Complete")
 
-
-
     def updateBatch(self, batch, eta):
         wGradient = [np.zeros((w.shape)) for w in self.weights]
         bGradient = [np.zeros((b.shape)) for b in self.bias]
@@ -94,7 +93,6 @@ class NeuralNet():
             #Element wise summation
             wGradient = [a + b for a, b in zip(wGradient, currentWGradient)]
             bGradient = [a + b for a, b in zip(bGradient, currentBGradient)]
-        print("backProp complete")
         self.weights = [w - (eta / len(batch)) * newW for w, newW in zip(self.weights, wGradient)]
         self.bias = [b - (eta / len(batch)) *newB for b, newB in zip(self.bias, bGradient)]
 
@@ -105,7 +103,7 @@ class NeuralNet():
         for i in range(2, self.numLayers + 1):
             prev = self.getLayerDimension(i - 1)
             current = self.getLayerDimension(i)
-            self.weights.append(np.random.rand(current, prev))
+            self.weights.append(np.random.randn(current, prev))
 
     def sigmoid(self, z):
         """The sigmoid function."""
@@ -122,6 +120,8 @@ class NeuralNet():
             list[i], list[j] = list[j], list[i]
         return list
     def getActivations(self, i):
+        if i == 1:
+            return self.currentX
         return self.activations[i + self.VALUE_SHIFT]
     def getZ(self, i):
         return self.z[i + self.VALUE_SHIFT]
@@ -152,6 +152,6 @@ class NeuralNet():
 
 training_data, validation_data, test_data = mnist_loader.load_data_wrapper()
 
-testNN = NeuralNet(training_data, [784, 30, 10])
+testNet = NeuralNet(training_data, [784, 30, 10])
 
-testNN.SGD(30, 10, 3)
+
